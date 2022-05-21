@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <title>4教科の偏差値のグラフ</title>
+    <style type="text/css">
+    <!--
+	p {font-size: 12px;}
+	li {font-size: 12px; line-height: 17px }
+	-->
+	</style>
+</head>
+<body>
+
+    <h3>4教科の偏差値のグラフ</h3>
+    <p>値を入力するとグラフが変化します。</p>
+   
+    <table>
+        <tr>
+            <th bgcolor="#FF5500"><font color="#FFFFFF">国語</font></th>
+            <th bgcolor="#5500FF"><font color="#FFFFFF">数学</font></th>
+            <th bgcolor="#FF0055"><font color="#FFFFFF">理科</font></th>
+            <th bgcolor="#0055FF"><font color="#FFFFFF">社会</font></th>
+        </tr>
+        <tr>
+            <td><input type="text" onChange="main偏差値()" size="5" maxlength=3 oninput="value = value.replace(/[^0-9]+/i,'');" id="VC" value="52"></td>
+            <td><input type="text" onChange="main偏差値()" size="5" maxlength=3 oninput="value = value.replace(/[^0-9]+/i,'');" id="PO" value="63"></td>
+            <td><input type="text" onChange="main偏差値()" size="5" maxlength=3 oninput="value = value.replace(/[^0-9]+/i,'');" id="WM" value="66"></td>
+            <td><input type="text" onChange="main偏差値()" size="5" maxlength=3 oninput="value = value.replace(/[^0-9]+/i,'');" id="PS" value="48"></td>
+        </tr>
+    </table>
+    <canvas id="GCCanvas" width="290" height="290"></canvas>
+
+<script>
+    'use strict';
+    let xw=290,xbias=5;
+    let yh=290,ybias=5;
+
+    let X軸最小=20;let X軸最大=79;
+    let Y軸最小=-0.5;let Y軸最大=4;
+    let dx=0.1;
+    let xscale=(xw-10)/(X軸最大-X軸最小);
+    let yscale=(yh-20)/(Y軸最大-Y軸最小);
+
+    let 平均=50;
+
+    /**
+    * @method ガウス分布
+    * @param {number} x X値
+    * @return {number} Y値
+    */
+    function ガウス分布(x){
+        let 分散=10;
+        return (1 / (Math.sqrt(2 * Math.PI * Math.pow(分散,2))) * Math.exp(-Math.pow((x-平均),2)/( 2 *Math.pow(分散,2))));
+    };
+
+    /**
+    * @method 描画位置
+    * @param {String[]} 座標
+    * @return {String[]} 描画位置
+    */
+    function 描画位置(座標){
+        return [xscale*(座標[0]-X軸最小)+xbias, yh-yscale*(座標[1]-Y軸最小)-ybias];
+    };
+
+    /**
+    * @method 直線描画
+    * @param {canvas} キャンバス
+    * @param {String[]} 開始
+    * @param {String[]} 終了
+    */
+    function 直線描画(キャンバス,開始,終了){
+        let 描画開始 = 描画位置(開始);
+        let 描画終了 = 描画位置(終了);
+
+        キャンバス.moveTo(描画開始[0],描画開始[1]);
+        キャンバス.lineTo(描画終了[0],描画終了[1]);
+    };
+
+    /**
+    * @method 文字描画
+    * @param {canvas} キャンバス
+    * @param {String[]} 文字
+    * @param {String[]} 位置
+    * @param {String[]} 寄せ
+    */
+    function 文字描画(キャンバス,文字,位置,寄せ){
+            キャンバス.textAlign = 寄せ;
+            let 描画 = 描画位置(位置);
+            キャンバス.fillText(文字, 描画[0], 描画[1]);
+    }
+
+    /**
+    * @method X軸描画
+    * @param {canvas} キャンバス
+    */
+    function X軸(キャンバス){
+        キャンバス.strokeStyle="#000000";
+        キャンバス.fillStyle=キャンバス.strokeStyle;
+        キャンバス.font = "10px serif";
+
+        キャンバス.beginPath();
+        // 目盛
+        for (let x = X軸最小;x<=X軸最大;++x){
+            if(x%10==0){
+                直線描画(キャンバス,[x,-0.03],[x,+0.03]);
+                文字描画(キャンバス,x,[x,-0.15],"left");
+            }
+        }
+
+        //軸
+        直線描画(キャンバス,[X軸最小,0],[X軸最大,0])
+
+        //名称
+        文字描画(キャンバス,`偏差値`,[X軸最大,-0.25],"right");
+        
+        キャンバス.stroke();
+    }
+
+    /**
+    * @method ガウス分布直線描画
+    * @param {canvas} キャンバス
+    * @param {String}  X値
+    */
+    function ガウス分布直線描画(キャンバス,x,タイトル){
+        let y = ガウス分布(x) * 100;
+        let 座標 = [x,y];
+        直線描画(キャンバス,座標,[x,0])
+
+        if (タイトル) {
+            キャンバス.fillStyle = キャンバス.strokeStyle;
+            let 位置 = 描画位置([x,y]);
+            var 寄せ = "left";
+            if(平均>x){
+                寄せ = "right";
+            }
+            文字描画(キャンバス,タイトル+`:`+x,[x,y],寄せ);
+        }
+    };
+
+    /**
+    * @method 偏差値分布描画
+    * @param {canvas} キャンバス
+    */
+    function 偏差値分布(キャンバス){
+        キャンバス.strokeStyle="#999999";
+        キャンバス.lineWidth=0.5;
+
+        キャンバス.beginPath();
+        for (let x = X軸最小; x <= X軸最大; x += dx) {
+            ガウス分布直線描画(キャンバス,x)
+        }
+        キャンバス.stroke();
+    };
+
+    /**
+    * @method ソート
+    * @param {let}} 偏差値情報配列
+    * @return {String[]} 描画位置
+    */
+    function 偏差値情報配列ソート(偏差値情報配列){
+        偏差値情報配列.sort(function(a,b){
+            if(Number(a.偏差値)<Number(b.偏差値)) return -1;
+            if(Number(a.偏差値)>Number(b.偏差値)) return 1;
+            return 0;
+        });
+        return 偏差値情報配列;
+    };
+
+    /**
+    * @method 差分描画
+    * @param {canvas} キャンバス
+    * @param {let} 偏差値情報1
+    * @param {let} 偏差値情報2
+    */
+    function 差分描画(キャンバス, 偏差値情報1, 偏差値情報2){
+        キャンバス.beginPath();
+         if(偏差値情報1.偏差値<X軸最小 || 偏差値情報1.偏差値>X軸最大 || 偏差値情報2.偏差値<X軸最小 || 偏差値情報2.偏差値>X軸最大){return;}
+        //線
+        キャンバス.strokeStyle="#000000";
+        キャンバス.lineWidth=2;
+        直線描画(キャンバス,[偏差値情報1.偏差値,-0.21],[偏差値情報2.偏差値,-0.21]);
+        直線描画(キャンバス,[偏差値情報1.偏差値,-0.16],[偏差値情報1.偏差値,-0.22]);
+        直線描画(キャンバス,[偏差値情報2.偏差値,-0.16],[偏差値情報2.偏差値,-0.22]);
+
+        //文字
+        キャンバス.fillStyle=キャンバス.strokeStyle;
+        キャンバス.font = "10px serif";
+        let 中央 = (Number(偏差値情報1.偏差値) + Number(偏差値情報2.偏差値)) / 2;
+        文字描画(キャンバス,Math.abs(偏差値情報1.偏差値 - 偏差値情報2.偏差値),[中央,-0.32],"center");
+
+        キャンバス.stroke();
+    }
+
+    /**
+    * @method 偏差値描画
+    * @param {canvas} キャンバス
+    * @param {let} 偏差値情報配列
+    */
+    function 偏差値描画(キャンバス, 偏差値情報配列){
+        キャンバス.lineWidth=3;
+        キャンバス.font = "bold 12px serif";
+        偏差値情報配列.forEach(偏差値情報 => {
+            キャンバス.beginPath();
+            キャンバス.strokeStyle=偏差値情報.色;
+            ガウス分布直線描画(キャンバス,偏差値情報.偏差値,偏差値情報.タイトル);
+            キャンバス.stroke();
+        });
+    }
+
+    /**
+    * @method 偏差値グラフ描画（メイン）
+    */
+    function main偏差値() {
+        ////////////////////////////////////////////////////////////////////
+        // 偏差値
+        ////////////////////////////////////////////////////////////////////
+        let gcCanvas = document.getElementById('GCCanvas').getContext('2d');
+        gcCanvas.clearRect(0, 0, xw, yh);
+
+        偏差値分布(gcCanvas);
+        X軸(gcCanvas);
+
+        // 値取得
+        let 偏差値配列 = new Array(
+            {偏差値:document.getElementById("VC").value, タイトル: `国語`, 色:`#FF5500`}
+            , {偏差値:document.getElementById("PO").value, タイトル: `数学`, 色:`#5500FF`}
+            , {偏差値:document.getElementById("WM").value, タイトル: `理科`, 色:`#FF0055`}
+            , {偏差値:document.getElementById("PS").value, タイトル: `社会`, 色:`#0055FF`}
+        );
+    
+        // ソート
+        偏差値配列 = 偏差値情報配列ソート(偏差値配列);
+
+        // 描画
+        偏差値描画(gcCanvas,偏差値配列);
+
+        // 偏差値の最大差分
+        差分描画(gcCanvas, 偏差値配列[0], 偏差値配列[偏差値配列.length-1]);
+
+    }
+
+    main偏差値();
+</script>
+</body>
+</html>
