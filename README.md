@@ -1,0 +1,2 @@
+# GaussianDistribution
+JavaScriptによるガウス分布のグラフ。偏差値のグラフ化
